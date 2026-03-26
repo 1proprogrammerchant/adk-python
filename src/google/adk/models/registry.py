@@ -34,6 +34,9 @@ Key is the regex that matches the model name.
 Value is the class that implements the model.
 """
 
+_compiled_regex_cache: dict[str, re.Pattern] = {}
+"""Cache for compiled regex patterns, keyed by the raw regex string."""
+
 
 class LLMRegistry:
   """Registry for LLMs."""
@@ -69,6 +72,8 @@ class LLMRegistry:
       )
 
     _llm_registry_dict[model_name_regex] = llm_cls
+    if model_name_regex not in _compiled_regex_cache:
+      _compiled_regex_cache[model_name_regex] = re.compile(model_name_regex)
 
   @staticmethod
   def register(llm_cls: type[BaseLlm]):
@@ -96,7 +101,8 @@ class LLMRegistry:
     """
 
     for regex, llm_class in _llm_registry_dict.items():
-      if re.compile(regex).fullmatch(model):
+      compiled = _compiled_regex_cache.get(regex) or re.compile(regex)
+      if compiled.fullmatch(model):
         return llm_class
 
     # Provide helpful error messages for known patterns

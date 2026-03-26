@@ -40,11 +40,11 @@ def extract_state_delta(
   """Extracts app, user, and session state deltas from a state dictionary."""
   deltas = {"app": {}, "user": {}, "session": {}}
   if state:
-    for key in state.keys():
+    for key, value in state.items():
       if key.startswith(State.APP_PREFIX):
-        deltas["app"][key.removeprefix(State.APP_PREFIX)] = state[key]
+        deltas["app"][key.removeprefix(State.APP_PREFIX)] = value
       elif key.startswith(State.USER_PREFIX):
-        deltas["user"][key.removeprefix(State.USER_PREFIX)] = state[key]
+        deltas["user"][key.removeprefix(State.USER_PREFIX)] = value
       elif not key.startswith(State.TEMP_PREFIX):
-        deltas["session"][key] = state[key]
+        deltas["session"][key] = value
   return deltas

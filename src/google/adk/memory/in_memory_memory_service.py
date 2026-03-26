@@ -37,9 +37,12 @@ def _user_key(app_name: str, user_id: str) -> str:
   return f'{app_name}/{user_id}'
 
 
+_RE_WORDS = re.compile(r'[A-Za-z]+')
+
+
 def _extract_words_lower(text: str) -> set[str]:
   """Extracts words from a string and converts them to lowercase."""
-  return set([word.lower() for word in re.findall(r'[A-Za-z]+', text)])
+  return {word.lower() for word in _RE_WORDS.findall(text)}
 
 
 class InMemoryMemoryService(BaseMemoryService):

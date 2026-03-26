@@ -200,10 +200,8 @@ class InMemorySessionService(BaseSessionService):
     """Merges app and user state into session state."""
     # Merge app state
     if app_name in self.app_state:
-      for key in self.app_state[app_name].keys():
-        copied_session.state[State.APP_PREFIX + key] = self.app_state[app_name][
-            key
-        ]
+      for key, value in self.app_state[app_name].items():
+        copied_session.state[State.APP_PREFIX + key] = value
 
     if (
         app_name not in self.user_state
@@ -212,10 +210,8 @@ class InMemorySessionService(BaseSessionService):
       return copied_session
 
     # Merge session state with user state.
-    for key in self.user_state[app_name][user_id].keys():
-      copied_session.state[State.USER_PREFIX + key] = self.user_state[app_name][
-          user_id
-      ][key]
+    for key, value in self.user_state[app_name][user_id].items():
+      copied_session.state[State.USER_PREFIX + key] = value
     return copied_session
 
   @override

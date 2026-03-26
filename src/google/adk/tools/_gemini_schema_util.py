@@ -24,6 +24,12 @@ from pydantic import Field
 
 from ..utils.variant_utils import get_google_llm_variant
 
+# Pre-compiled regex patterns for _to_snake_case
+_RE_NON_ALNUM = re.compile(r"[^a-zA-Z0-9]+")
+_RE_LOWER_UPPER = re.compile(r"([a-z0-9])([A-Z])")
+_RE_UPPER_UPPER_LOWER = re.compile(r"([A-Z]+)([A-Z][a-z])")
+_RE_MULTI_UNDERSCORE = re.compile(r"_+")
+
 
 class _ExtendedJSONSchema(JSONSchema):
   property_ordering: Optional[list[str]] = Field(
@@ -54,19 +60,19 @@ def _to_snake_case(text: str) -> str:
   """
 
   # Handle spaces and non-alphanumeric characters (replace with underscores)
-  text = re.sub(r"[^a-zA-Z0-9]+", "_", text)
+  text = _RE_NON_ALNUM.sub("_", text)
 
   # Insert underscores before uppercase letters (handling both CamelCases)
-  text = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", text)  # lowerCamelCase
-  text = re.sub(
-      r"([A-Z]+)([A-Z][a-z])", r"\1_\2", text
+  text = _RE_LOWER_UPPER.sub(r"\1_\2", text)  # lowerCamelCase
+  text = _RE_UPPER_UPPER_LOWER.sub(
+      r"\1_\2", text
   )  # UpperCamelCase and acronyms
 
   # Convert to lowercase
   text = text.lower()
 
   # Remove consecutive underscores (clean up extra underscores)
-  text = re.sub(r"_+", "_", text)
+  text = _RE_MULTI_UNDERSCORE.sub("_", text)
 
   # Remove leading and trailing underscores
   text = text.strip("_")

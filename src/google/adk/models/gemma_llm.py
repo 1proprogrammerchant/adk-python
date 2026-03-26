@@ -37,6 +37,10 @@ from typing_extensions import override
 
 logger = logging.getLogger('google_adk.' + __name__)
 
+_MARKDOWN_CODE_BLOCK_RE = re.compile(
+    r'```(?:(json|tool_code))?\s*(.*?)\s*```', re.DOTALL
+)
+
 
 class GemmaFunctionCallingMixin:
   """Mixin providing function calling support for Gemma models.
@@ -113,10 +117,7 @@ class GemmaFunctionCallingMixin:
     try:
       json_candidate = None
 
-      markdown_code_block_pattern = re.compile(
-          r'```(?:(json|tool_code))?\s*(.*?)\s*```', re.DOTALL
-      )
-      block_match = markdown_code_block_pattern.search(response_text)
+      block_match = _MARKDOWN_CODE_BLOCK_RE.search(response_text)
 
       if block_match:
         json_candidate = block_match.group(2).strip()

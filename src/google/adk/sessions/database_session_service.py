@@ -162,10 +162,10 @@ def _merge_state(
 ) -> dict[str, Any]:
   """Merge app, user, and session states into a single state dictionary."""
   merged_state = copy.deepcopy(session_state)
-  for key in app_state.keys():
-    merged_state[State.APP_PREFIX + key] = app_state[key]
-  for key in user_state.keys():
-    merged_state[State.USER_PREFIX + key] = user_state[key]
+  for key, value in app_state.items():
+    merged_state[State.APP_PREFIX + key] = value
+  for key, value in user_state.items():
+    merged_state[State.USER_PREFIX + key] = value
   return merged_state
 
 
