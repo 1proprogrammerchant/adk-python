@@ -111,13 +111,36 @@ class GeminiLlmConnection(BaseLlmConnection):
           ),
       )
     else:
-      logger.debug('Sending LLM new content %s', content)
-      await self._gemini_session.send(
-          input=types.LiveClientContent(
-              turns=[content],
-              turn_complete=True,
+      # Gemini 3.1 live models require in-session text to go through
+      # send_realtime_input(text=...) instead of LiveClientContent.
+      if self._is_gemini_31_live():
+        text_chunks = []
+        unsupported_parts = []
+
+        for part in content.parts:
+          if part.text:
+            text_chunks.append(part.text)
+          else:
+            unsupported_parts.append(part)
+
+        if unsupported_parts:
+          raise ValueError(
+              'Gemini 3.1 live only supports in-session text via '
+              'send_realtime_input(text=...). Non-text parts should be sent '
+              'through realtime audio/video paths.'
           )
-      )
+
+        combined_text = ''.join(text_chunks)
+        logger.debug('Sending Gemini 3.1 live realtime text: %s', combined_text)
+        await self._gemini_session.send_realtime_input(text=combined_text)
+      else:
+        logger.debug('Sending LLM new content %s', content)
+        await self._gemini_session.send(
+            input=types.LiveClientContent(
+                turns=[content],
+                turn_complete=True,
+            )
+        )
 
   async def send_realtime(self, input: RealtimeInput):
     """Sends a chunk of audio or a frame of video to the model in realtime.
@@ -128,7 +151,10 @@ class GeminiLlmConnection(BaseLlmConnection):
     if isinstance(input, types.Blob):
       # The blob is binary and is very large. So let's not log it.
       logger.debug('Sending LLM Blob.')
-      await self._gemini_session.send_realtime_input(media=input)
+      if self._is_gemini_31_live():
+        await self._gemini_session.send_realtime_input(audio=input)
+      else:
+        await self._gemini_session.send_realtime_input(media=input)
 
     elif isinstance(input, types.ActivityStart):
       logger.debug('Sending LLM activity start signal.')
@@ -192,8 +218,8 @@ class GeminiLlmConnection(BaseLlmConnection):
                 model_version=self._model_version,
             )
 
-          if content and content.parts:
-            llm_response = LlmResponse(
+            if content and content.parts:
+             llm_response = LlmResponse(
                 content=content,
                 interrupted=message.server_content.interrupted,
                 model_version=self._model_version,
@@ -204,13 +230,24 @@ class GeminiLlmConnection(BaseLlmConnection):
               llm_response.grounding_metadata = (
                   message.server_content.grounding_metadata
               )
-            if content.parts[0].text:
-              text += content.parts[0].text
+
+            saw_text = False
+            saw_non_text_non_inline = False
+
+            for part in content.parts:
+              if part.text:
+                text += part.text
+                saw_text = True
+              # don't yield the merged text event when receiving audio data
+              elif not part.inline_data:
+                saw_non_text_non_inline = True
+
+            if saw_text:
               llm_response.partial = True
-            # don't yield the merged text event when receiving audio data
-            elif text and not content.parts[0].inline_data:
+            elif text and saw_non_text_non_inline:
               yield self.__build_full_text_response(text)
               text = ''
+
             yield llm_response
           # Note: in some cases, tool_call may arrive before
           # generation_complete, causing transcription to appear after
