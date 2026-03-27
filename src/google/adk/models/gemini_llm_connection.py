@@ -50,9 +50,12 @@ class GeminiLlmConnection(BaseLlmConnection):
     self._api_backend = api_backend
     self._model_version = model_version
 
-  def _isgemini_31_live(self) -> bool:
+  def _is_gemini_31_live(self) -> bool:
     mv = (self._model_version or '').lower()
     return 'gemini-3.1' in mv and 'live' in mv
+  
+  def _is_gemini_31_live(self) -> bool:
+    return self._isgemini_31_live()
 
   async def send_history(self, history: list[types.Content]):
     """Sends the conversation history to the gemini model.
@@ -222,8 +225,8 @@ class GeminiLlmConnection(BaseLlmConnection):
                 model_version=self._model_version,
             )
 
-            if content and content.parts:
-             llm_response = LlmResponse(
+          if content and content.parts:
+            llm_response = LlmResponse(
                 content=content,
                 interrupted=message.server_content.interrupted,
                 model_version=self._model_version,
